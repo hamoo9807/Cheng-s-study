@@ -13,7 +13,118 @@ typedef struct DoubleList {
 	DoubleNode* head;
 	DoubleNode* tail;
 }DoubleList;
-
+int DataExists(DoubleList*, int);
+int DataCircleExists(DoubleList*, int);
+int InsertCircle(DoubleList* Circle,int data)
+{
+	if(Circle==NULL)
+	{
+		printf("error! null circle!\n");
+		return -1;
+	}
+	DoubleNode* newNode = CreateNode(data);
+	if (newNode == NULL)
+	{
+		printf("failed to createNode!\n");
+		return -1;
+	}
+	if(DataCircleExists(Circle,data))
+	{
+		printf("目标已存在，无法重复插入");
+		return -1;
+	}
+	if (Circle->head == NULL)
+	{
+		Circle->head = newNode;
+		Circle->tail = newNode;
+		newNode->prev = newNode;
+		newNode->next = newNode;
+    }
+	else
+	{
+		Circle->tail->next = newNode;
+		newNode->prev = Circle->tail;
+		newNode->next = Circle->head;
+		Circle->head->prev = newNode;
+		Circle->tail = newNode;
+	}
+	Circle->size++;
+	return 1;
+}
+void printCircle(DoubleList* circle,int data)
+{
+	if (circle == NULL)
+	{
+		printf("error! circleNULL!\n");
+		return;
+	}
+	if (circle->head == NULL)
+	{
+		printf("empty circle!error!\n");
+		return;
+	}
+	DoubleNode* cur = findCircle(circle,data);
+	if (cur == NULL)
+	{
+		cur=circle->head;
+		printf("查找不到值，默认为从头遍历\n");
+	}
+	int count = 0;
+	while (count < circle->size)
+	{
+		printf("data:%d\n", cur->data);
+		cur = cur->next;
+		count++;
+	}
+	printf("have printed the circle!\n");
+}
+DoubleNode* findCircle(DoubleList* circle, int data)
+{
+	if (circle == NULL)
+	{
+		printf("NULL! error!\n");
+		return NULL;
+	}
+	if (circle->head == NULL)
+	{
+		printf("empty circle!\n");
+		return NULL;
+	}
+	DoubleNode* cur = circle->head;
+	int count = 0;
+	while (count < circle->size)
+	{
+		if (cur->data == data)
+		{
+			return cur;
+		}
+		cur = cur->next;
+		count++;
+	}
+	printf("have not found the data:%d!\n",data);
+	return NULL;
+}
+int DataExists(DoubleList* list, int data)
+{
+	if (list == NULL)
+	{
+		printf("list is NULL\n");
+		return 0;
+	}
+	if (list->head == NULL)
+	{
+		printf("list is empty!");
+		return 0;
+	}
+	DoubleNode* target = findNode(list, data);
+	return target != NULL;
+}
+int DataCircleExists(DoubleList* circle, int data)
+{
+	//同上
+	DoubleNode* target = findNode(circle, data);
+	return target != NULL;
+}
 DoubleList* InitList()
 {
 	DoubleList* newList = (DoubleList*)malloc(sizeof(DoubleList));
@@ -45,6 +156,11 @@ int InsertNode(DoubleList* list, int data)
 	if (list == NULL)
 	{
 		printf("List is empty!\n");
+		return -1;
+	}
+	if (DataExists(list, data))
+	{
+		printf("目标已存在，无法重复插入");
 		return -1;
 	}
 	DoubleNode* newNode = CreateNode(data);
@@ -134,6 +250,69 @@ void travelBck(DoubleList* list)
 		cur = cur->prev;
 	}
 	printf("\n");
+}
+int swapList(DoubleList* list)
+{
+	if (list == NULL)
+	{
+		printf("error!empty list!\n");
+		return -1;
+	}
+	if (list->head == NULL)
+	{
+		printf("翻转的是空链表，翻转失败！");
+		return -1;
+	}
+	DoubleNode* cur = list->head;
+	if (cur->next==NULL)
+	{
+		printf("链表只有一个节点！无需翻转！\n");
+		return 0;
+	}
+	while (cur != NULL)
+	{
+		DoubleNode* temp = cur->prev;
+		cur->prev = cur->next;
+		cur->next = temp;
+		cur = cur->prev;
+	}
+	DoubleNode* temp = list->head;
+	list->head = list->tail;
+	list->tail = temp;
+	return 1;
+}
+int CutCircle(DoubleList* Circle,int data)
+{
+	if (Circle == NULL)
+	{
+		printf("error! NULL circle\n");
+		return -1;
+	}
+	if (Circle->head == NULL)
+	{
+		printf("空环！无法剪切环\n");
+		return -1;
+	}
+	if (Circle->size == 1)
+	{
+		Circle->tail->next = NULL;
+		Circle->head->prev = NULL;
+		printf("目标环为单环，已剪切成单链表!\n");
+		return 1;
+	}
+	DoubleNode* target = findCircle(Circle, data);
+	if (target == NULL)
+	{
+		printf("无法找到目标节点，无法进行剪切!\n");
+		return -1;
+	}
+			Circle->head = target;
+			DoubleNode* tail = target->prev;
+			tail->next = NULL;
+			target->prev = NULL;
+			Circle->tail = tail;
+			printf("已以目标节点为头节点剪切环！\n");
+			return 1;
 }
 void destroyList(DoubleList* list)
 {
