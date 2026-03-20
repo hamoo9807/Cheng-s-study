@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>图书管理系统 - 书籍列表</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Microsoft YaHei', Arial, sans-serif; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 30px; 
+            min-height: 100vh;
+        }
+        .container { 
+            max-width: 1200px; 
+            margin: 0 auto; 
+            background: #fff; 
+            border-radius: 12px; 
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1); 
+            padding: 30px; 
+        }
+        h1 { 
+            color: #667eea; 
+            text-align: center; 
+            margin-bottom: 30px; 
+            font-size: 32px; 
+            font-weight: bold;
+        }
+        .path-tip {
+            text-align: center;
+            color: #666;
+            margin-bottom: 20px;
+            font-size: 14px;
+            background: #f5f5f5;
+            padding: 10px;
+            border-radius: 6px;
+        }
+        .refresh-btn {
+            display: block;
+            width: 220px;
+            height: 45px;
+            line-height: 45px;
+            text-align: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+            border-radius: 8px;
+            margin: 0 auto 30px;
+            cursor: pointer;
+            text-decoration: none;
+            font-size: 16px;
+            font-weight: bold;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .refresh-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        th { 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff; 
+            padding: 16px; 
+            text-align: center; 
+            font-weight: bold;
+            font-size: 16px;
+        }
+        td { 
+            padding: 14px; 
+            text-align: center; 
+            border-bottom: 1px solid #f0f0f0; 
+            font-size: 14px;
+        }
+        tr:hover { 
+            background: #f8f9ff; 
+            transition: background 0.2s;
+        }
+        .status-available { color: #52c41a; font-weight: bold; }
+        .status-borrowed { color: #faad14; font-weight: bold; }
+        .empty-tip {
+            text-align: center;
+            color: #999;
+            padding: 40px;
+            font-size: 16px;
+        }
+        .error-tip {
+            text-align: center;
+            color: #ff4d4f;
+            padding: 20px;
+            background: #fff2f0;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📚 图书管理系统 - 书籍列表</h1>
+        <!-- 路径提示，帮你定位问题 -->
+        <div class="path-tip" id="pathTip">
+            当前页面地址：<span id="currentUrl"></span><br>
+            目标CSV地址：<span id="csvUrl"></span>
+        </div>
+        <a class="refresh-btn" onclick="loadBookData()">🔄 刷新书籍数据</a>
+        <div id="errorBox"></div>
+        <table id="bookTable">
+            <thead>
+                <tr>
+                    <th>ISBN</th>
+                    <th>书名</th>
+                    <th>作者</th>
+                    <th>总库存</th>
+                    <th>可借数量</th>
+                    <th>已借数量</th>
+                </tr>
+            </thead>
+            <tbody id="bookTbody">
+                <tr><td colspan="6" class="empty-tip">暂无数据，请先在C语言程序中添加图书</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        // 页面加载时显示路径信息
+        window.onload = function() {
+            const currentUrl = window.location.href;
+            const csvUrl = new URL('data/books.csv', window.location.href).href;
+            document.getElementById('currentUrl').textContent = currentUrl;
+            document.getElementById('csvUrl').textContent = csvUrl;
+
+            // 自动加载数据
+            loadBookData();
+        }
+
+        // 核心函数：读取CSV文件并渲染表格
+        function loadBookData() {
+            const errorBox = document.getElementById('errorBox');
+            const tbody = document.getElementById('bookTbody');
+            errorBox.innerHTML = ''; // 清空旧错误
+            tbody.innerHTML = '<tr><td colspan="6" class="empty-tip">正在加载数据...</td></tr>';
+
+            // 读取CSV（相对路径，兼容Live Server）
+            fetch('data/books.csv')
+                .then(response => {
+                    // 检查HTTP请求是否成功
+                    if (!response.ok) {
+                        throw new Error(`HTTP错误：${response.status} ${response.statusText}`);
+                    }
+                    return response.text();
+                })
+                .then(csvText => {
+                    // 解析CSV数据
+                    const rows = csvText.split('\n').filter(row => row.trim() !== '');
+                    tbody.innerHTML = ''; // 清空旧数据
+
+                    if (rows.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="6" class="empty-tip">暂无数据，请先在C语言程序中添加图书</td></tr>';
+                        return;
+                    }
+
+                    // 遍历数据行
+                    for (let i = 0; i < rows.length; i++) {
+                        const cols = rows[i].split(',');
+                        if (cols.length < 5) continue; // 跳过无效行
+
+                        // 创建表格行
+                        const tr = document.createElement('tr');
+                        const total = parseInt(cols[3]) + parseInt(cols[4]);
+                        tr.innerHTML = `
+                            <td>${cols[0]}</td>
+                            <td>${cols[1]}</td>
+                            <td>${cols[2]}</td>
+                            <td>${total}</td>
+                            <td class="status-available">${cols[3]}</td>
+                            <td class="status-borrowed">${cols[4]}</td>
+                        `;
+                        tbody.appendChild(tr);
+                    }
+                })
+                .catch(error => {
+                    // 详细错误提示
+                    let errorMsg = `❌ 读取书籍数据失败：${error.message}<br><br>请确保：`;
+                    errorMsg += `<br>1. 你是用【VS Code Live Server】打开的本页面（禁止直接双击打开HTML）`;
+                    errorMsg += `<br>2. 项目根目录存在【data】文件夹，且里面有【books.csv】文件`;
+                    errorMsg += `<br>3. C语言程序已经成功导出数据到 data/books.csv`;
+                    errorMsg += `<br>4. 文件夹和文件名的大小写完全正确（data/books.csv 全小写）`;
+                    
+                    errorBox.innerHTML = `<div class="error-tip">${errorMsg}</div>`;
+                    tbody.innerHTML = '<tr><td colspan="6" class="empty-tip">数据加载失败</td></tr>';
+                    
+                    // 控制台输出详细错误，方便调试
+                    console.error('读取失败详细信息：', error);
+                });
+        }
+    </script>
+</body>
+</html>
